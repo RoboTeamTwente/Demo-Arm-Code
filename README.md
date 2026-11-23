@@ -137,7 +137,12 @@ config = SO101FollowerConfig(
 Change `index_or_path` if the PS3 Eye is assigned a different `/dev/video*` device. The `camera_port` argument in your `Follower` constructor should also be kept consistent with the actual camera configuration.
 
 ## Run the demo
-
+To track the leader with follower arm 
+```bash
+conda activate lerobot
+python armtracking.py
+```
+For reset and wave 
 ```bash
 conda activate lerobot
 python armed.py

@@ -1,16 +1,10 @@
 
-"""Simple wrapper around the LeRobot SO-101 follower arm."""
-
 import time
 
 from lerobot.robots.so_follower import (
     SO101Follower,
     SO101FollowerConfig,
 )
-from lerobot.cameras.opencv import OpenCVCameraConfig
-from lerobot.cameras.configs import Cv2Backends
-from pathlib import Path
-
 
 # Valid joint names and their calibrated position range.
 # Arm joints use -100..100, the gripper uses 0..100.
@@ -32,28 +26,17 @@ class Follower:
         self,
         port: str = "/dev/ttyACM0",
         id: str = "T300",
-        camera_port: str = "/dev/video2",
     ) -> None:
 
         self.port = port
         self.id = id
-        self.camera_port = camera_port
 
         # Configure motors and PS3 Eye camera
         
         config = SO101FollowerConfig(
             port=self.port,
             id=self.id,
-            cameras={
-                "ps3_eye": OpenCVCameraConfig(
-                    index_or_path=2,
-                    backend=Cv2Backends.V4L2,
-                    fourcc="YUYV",
-                    fps=30,
-                    width=640,
-                    height=480,
-                )
-            },
+            cameras={},
         )
 
 
@@ -221,20 +204,6 @@ class Follower:
         finally:
             self.slower_move(joint, start)
 
-    # ===== CAMERA =====
-
-    def get_camera_frame(self):
-        """Return the latest PS3 Eye camera frame as an RGB array."""
-
-        if not self.follower.is_connected:
-            raise RuntimeError("Robot is not connected.")
-
-        return self.follower.cameras["ps3_eye"].read()
-
-    def get_camera(self):
-        """Return the PS3 Eye camera object."""
-
-        return self.follower.cameras["ps3_eye"]
 
     # ===== CONNECTION =====
 
