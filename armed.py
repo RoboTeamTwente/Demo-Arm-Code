@@ -1,32 +1,64 @@
 
-import time
+import cv2
+import threading
 
-import follower
-from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
-from lerobot.teleoperators.so_leader import SO101Leader, SO101LeaderConfig
+from follower import Follower
 
-PORT = ["/dev/ttyACM0","/dev/ttyACM1"]
+PORT = ["/dev/ttyACM0", "/dev/ttyACM1"]
 BOTS = ["T300", "SKYNET"]
 
-# ARM SETTINGS
 FOLLOWER_NAME = BOTS[0]
-LEADER_NAME = BOTS[1]
-
 FOLLOWER_PORT = PORT[0]
 
-def reset_arm(follower):
-    follower.send_action({"shoulder_lift.pos":-100.0})
-    follower.send_action({"elbow_flex.pos":100.0})
-    time.sleep(1)
-    follower.send_action({"wrist_flex.pos":-100.0})
-    time.sleep(1)
-    follower.send_action({"wrist_roll.pos":0.0})
-    follower.send_action({"gripper.pos":10.0})
-    follower.send_action({"shoulder_pan.pos":-100.0})
 
-def main():
-    follower = Follower.Follower(port=FOLLOWER_PORT, id=FOLLOWER_NAME)  
-    reset_arm(follower)
+def main() -> None:
+    follower = Follower(
+        port=FOLLOWER_PORT,
+        id=FOLLOWER_NAME
+    )
+
+    movement_error = []
+
+    def arm_animation():
+        try:
+            follower.reset_arm()
+            follower.wave()
+        except Exception as error:
+            movement_error.append(error)
+
+    # Run the movement separately from the camera preview
+    movement = threading.Thread(target=arm_animation)
+
+    try:
+        movement.start()
+
+        print("PS3 Eye camera active.")
+        print("Press Q to close the camera.")
+
+        while True:
+            frame = follower.get_camera_frame()
+
+            # LeRobot provides RGB; OpenCV displays BGR
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+            cv2.imshow("SO-101 Camera", frame)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+    finally:
+        # Allow the current animation to finish
+        if movement.ident is not None:
+            movement.join()
+
+        cv2.destroyAllWindows()
+        follower.disconnect()
+
+    if movement_error:
+        raise movement_error[0]
+
+    print("Done!")
+
 
 if __name__ == "__main__":
     main()
